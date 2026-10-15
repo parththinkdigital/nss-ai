@@ -12,10 +12,10 @@ Designed for seamless deployment on **Railway's Free Tier** (or any container ru
 
 - **Official Public Page Scraper**: Scrapes 12+ core public pages from `https://nss.gov.in/`, including Organization, Objectives, 120-hour Regular Activities, 7-day Special Camping Programme, Awards, Volunteer statistics, and Directory.
 - **Lightweight Hybrid Vector Index**: In-memory dense vector embeddings (384-dimensional normalized subword space) combined with BM25 lexical keyword matching. Zero heavyweight C++ binary dependencies, instant cold starts.
-- **NVIDIA NIM Muse Glimmer API Integration**: Calls the `meta/muse-glimmer-30b` model through NVIDIA NIM's OpenAI-compatible endpoint (`/v1/chat/completions`) from a server-side API route.
-- **Strict Grounding & Out-of-Domain Guard**: Returns clear, factual answers strictly from official NSS documents. If a query is outside the NSS scope, it replies with the exact requirement:
-  > *"I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals."*
-- **Clickable Source Citations**: Every answer includes clickable markdown links and citation pills referencing the original pages on `nss.gov.in`.
+- **NVIDIA NIM API Integration**: Powered by `openai/gpt-oss-20b` via NVIDIA NIM's endpoint (`/v1/chat/completions`) for swift responses (~2-3s).
+- **Live Web Search Fallback**: When official local documentation does not have the answer or requires updated public details, the chatbot automatically searches verified web sources and synthesizes a grounded answer with clickable citations.
+- **Natural Conversational Processing**: Reads the user's entire message, warmly acknowledging greetings and addressing complex multi-part questions directly.
+- **Clickable Source Citations**: Every answer includes clickable markdown links and citation pills referencing original pages on `nss.gov.in` and official public sources.
 - **Zero-Database Browser Storage**: Chat history persists automatically in the user's browser `localStorage` (`nss_chatbot_messages_v1`). No account, login, or database required.
 - **Direct Mode Fallback**: If `NVIDIA_API_KEY` is not yet configured, the app seamlessly serves grounded retrieval answers with notice rather than crashing.
 
@@ -27,18 +27,19 @@ Designed for seamless deployment on **Railway's Free Tier** (or any container ru
 nss/
 ├── app/
 │   ├── api/
-│   │   ├── chat/route.js        # Server-side API route with vector retrieval & NIM call
+│   │   ├── chat/route.js        # Server-side API route with vector retrieval, web fallback & NIM call
 │   │   └── status/route.js      # System health & index status endpoint
 │   ├── globals.css              # Tailwind CSS styles & animations
 │   ├── layout.js                # Root layout with civic branding
-│   └── page.js                  # Chat interface with localStorage & suggested prompts
+│   └── page.js                  # Chat interface with localStorage & dynamic status indicator
 ├── components/
 │   └── MarkdownRenderer.jsx     # Safe markdown parser for formatted answers & links
 ├── data/
 │   └── nss_index.json           # Pre-indexed NSS chunks with embeddings (54 chunks)
 ├── lib/
-│   ├── nvidia-nim.js            # NVIDIA NIM API client (meta/muse-glimmer-30b)
-│   └── vector-store.js          # In-memory vector store (dense cosine + BM25)
+│   ├── nvidia-nim.js            # NVIDIA NIM API client (openai/gpt-oss-20b)
+│   ├── vector-store.js          # In-memory vector store (dense cosine + BM25)
+│   └── web-search.js            # Live search fallback engine
 ├── scripts/
 │   └── scrape-and-index.js      # Scraper and vector index generator
 ├── Dockerfile                   # Multi-stage production container build
