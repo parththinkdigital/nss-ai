@@ -14,6 +14,21 @@ export async function GET() {
       indexDate = data.createdAt;
     }
 
+    if (!process.env.NVIDIA_API_KEY) {
+      try {
+        const envPath = path.join(process.cwd(), '.env.local');
+        if (fs.existsSync(envPath)) {
+          const content = fs.readFileSync(envPath, 'utf8');
+          for (const line of content.split('\n')) {
+            const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+            if (match && !process.env[match[1]]) {
+              process.env[match[1]] = (match[2] || '').trim().replace(/^['"]|['"]$/g, '');
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     return NextResponse.json({
       status: 'ready',
       totalChunks,

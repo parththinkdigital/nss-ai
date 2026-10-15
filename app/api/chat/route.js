@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { VectorStore } from '@/lib/vector-store';
 import { generateNssAnswer } from '@/lib/nvidia-nim';
+import { searchWeb } from '@/lib/web-search';
 
 // In-memory cached VectorStore instance
 let cachedVectorStore = null;
@@ -22,6 +23,8 @@ function getVectorStore() {
   return cachedVectorStore;
 }
 
+const NSS_DOMAIN_REGEX = /\b(nss|national service scheme|scheme|programme|program|motto|motive|motives|aim|aims|objective|objectives|symbol|badge|camp|camping|volunteer|volunteers|volunteering|activity|activities|hours|award|awards|prize|trophy|advisory|directorate|gandhi|ministry|youth|service|enroll|enrollment|tenure|certificate|wheel|konark|sun temple)\b/i;
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -37,31 +40,12 @@ export async function POST(request) {
     const trimmedMessage = message.trim();
     const store = getVectorStore();
 
-    // Perform hybrid vector + BM25 retrieval
-    const retrievedChunks = store.search(trimmedMessage, {
-      topK: 4,
-      minScore: 0.10,
-    });
+    // Check domain relevance
+    const isDomainQuery = NSS_DOMAIN_REGEX.test(trimmedMessage);
+    const hasHistory = Array.isArray(history) && history.length > 0;
 
-    // Guardrail: Check domain relevance
-    // If no chunks match, or matched words ratio is very low, or score is too low
-    const topMatch = retrievedChunks[0];
-    const queryWordCount = topMatch ? (topMatch.queryWordCount || 1) : 1;
-    const matchedWords = topMatch ? (topMatch.matchedWords || 0) : 0;
-    const matchRatio = matchedWords / Math.max(1, queryWordCount);
-
-    // Unrelated query detection:
-    // 1. Zero matched content words
-    // 2. Query has 3+ content words but matched ratio is < 40% (e.g. only matched common word like "home") and score < 0.35
-    // 3. Top match score is below 0.20 and bm25Score is below 0.30
-    const isOutOfDomain =
-      !topMatch ||
-      matchedWords === 0 ||
-      (queryWordCount >= 3 && matchRatio < 0.40 && topMatch.score < 0.35) ||
-      (queryWordCount >= 2 && matchedWords <= 1 && topMatch.score < 0.22 && topMatch.bm25Score < 0.30) ||
-      topMatch.score < 0.16;
-
-    if (isOutOfDomain) {
+    // Guardrail: If message does not mention any NSS domain terms and is not a conversational follow-up
+    if (!isDomainQuery && !hasHistory) {
       return NextResponse.json({
         answer:
           "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
@@ -71,12 +55,73 @@ export async function POST(request) {
       });
     }
 
-    // Call NVIDIA NIM Muse Glimmer API
+    // Enhance search query for vector retrieval if needed
+    const effectiveSearchQuery = isDomainQuery
+      ? (/\bnss\b/i.test(trimmedMessage) ? trimmedMessage : `NSS ${trimmedMessage}`)
+      : `NSS ${trimmedMessage}`;
+
+    // Perform hybrid vector + BM25 retrieval
+    const retrievedChunks = store.search(effectiveSearchQuery, {
+      topK: 4,
+      minScore: 0.12,
+    });
+
+    const topMatch = retrievedChunks[0];
+    const isLocalConfident = topMatch && topMatch.score >= 0.45;
+
+    let finalChunks = retrievedChunks;
+    let usedWebSearch = false;
+
+    // If answer is not clearly found or covered in local index, search the live web!
+    if (!isLocalConfident) {
+      try {
+        const webResults = await searchWeb(trimmedMessage);
+        if (webResults && webResults.length > 0) {
+          const webChunks = webResults.map((r, i) => ({
+            id: `web-${i + 1}`,
+            title: r.title,
+            url: r.url,
+            text: r.snippet,
+          }));
+          finalChunks = [...webChunks, ...retrievedChunks].slice(0, 5);
+          usedWebSearch = true;
+        }
+      } catch (searchErr) {
+        console.warn('[Web Search Fallback Error]:', searchErr.message);
+      }
+    }
+
+    // If query has no domain terms and neither local nor web returned relevant NSS content, reject
+    if (!isDomainQuery && (!topMatch || topMatch.matchedWords === 0 || topMatch.score < 0.22) && !usedWebSearch) {
+      return NextResponse.json({
+        answer:
+          "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
+        sources: [],
+        model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
+        isOutOfScope: true,
+      });
+    }
+
+    if (finalChunks.length === 0) {
+      return NextResponse.json({
+        answer:
+          "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
+        sources: [],
+        model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
+        isOutOfScope: true,
+      });
+    }
+
+    // Call NVIDIA NIM API
     const response = await generateNssAnswer({
       question: trimmedMessage,
-      contextChunks: retrievedChunks,
+      contextChunks: finalChunks,
       history,
     });
+
+    if (usedWebSearch) {
+      response.searchSource = 'web_search';
+    }
 
     return NextResponse.json(response);
   } catch (error) {

@@ -52,16 +52,31 @@ const SUGGESTED_QUESTIONS = [
   },
 ];
 
+const LOADING_WORDS = ['Thinking...', 'Gathering information...', 'Searching records...'];
+
 export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingWordIndex, setLoadingWordIndex] = useState(0);
   const [statusInfo, setStatusInfo] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Cycle loading words while waiting for response
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingWordIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setLoadingWordIndex((prev) => (prev + 1) % LOADING_WORDS.length);
+    }, 1200);
+    return () => clearInterval(timer);
+  }, [isLoading]);
 
   // Load chat history from localStorage on initial render
   useEffect(() => {
@@ -239,9 +254,9 @@ export default function Home() {
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>National Service Scheme (NSS) Information Portal</span>
+              <span>National Service Scheme (NSS)</span>
               <span className="text-slate-600 hidden sm:inline">•</span>
-              <span className="hidden sm:inline">Motto: "NOT ME BUT YOU"</span>
+              <span className="hidden sm:inline">Motto: &quot;NOT ME BUT YOU&quot;</span>
             </div>
             <div className="flex items-center gap-2 text-slate-400">
               <a
@@ -430,8 +445,8 @@ export default function Home() {
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce [animation-delay:-0.15s]"></span>
                   <span className="w-2 h-2 rounded-full bg-blue-800 animate-bounce"></span>
                 </div>
-                <span className="text-xs text-slate-500">
-                  Retrieving NSS chunks & calling NVIDIA NIM Muse Glimmer...
+                <span className="text-xs font-medium text-slate-500">
+                  {LOADING_WORDS[loadingWordIndex]}
                 </span>
               </div>
             </div>
