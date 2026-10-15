@@ -19,7 +19,7 @@ export async function GET() {
       totalChunks,
       indexDate,
       hasApiKey: Boolean(process.env.NVIDIA_API_KEY && process.env.NVIDIA_API_KEY !== 'YOUR_NVIDIA_API_KEY_HERE'),
-      model: process.env.NVIDIA_MODEL || 'meta/muse-glimmer-30b',
+      model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
       endpoint: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
     });
   } catch (err) {

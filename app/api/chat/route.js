@@ -66,7 +66,7 @@ export async function POST(request) {
         answer:
           "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
         sources: [],
-        model: process.env.NVIDIA_MODEL || 'meta/muse-glimmer-30b',
+        model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
         isOutOfScope: true,
       });
     }

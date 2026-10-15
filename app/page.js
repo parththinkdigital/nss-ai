@@ -148,7 +148,7 @@ export default function Home() {
         role: 'assistant',
         content: data.answer || 'No response generated.',
         sources: data.sources || [],
-        model: data.model || 'meta/muse-glimmer-30b',
+        model: data.model || 'openai/gpt-oss-20b',
         mode: data.mode || 'default',
         isOutOfScope: Boolean(data.isOutOfScope),
         warning: data.warning || null,
