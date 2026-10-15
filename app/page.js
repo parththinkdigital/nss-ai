@@ -11,14 +11,9 @@ import {
   Compass,
   Phone,
   Clock,
-  Sparkles,
-  Info,
   Check,
   Copy,
   AlertCircle,
-  RotateCcw,
-  ShieldCheck,
-  Cpu,
 } from 'lucide-react';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 
@@ -224,43 +219,40 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Model Status Pill & Actions */}
+          {/* Actions */}
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
-              <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-              <span>NVIDIA NIM</span>
-              <span className="text-[10px] font-mono bg-slate-900 px-1.5 py-0.5 rounded text-amber-300">
-                meta/muse-glimmer-30b
-              </span>
-            </div>
-
             {messages.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                title="Clear Chat History (from browser storage)"
-                className="flex items-center gap-1 text-xs text-slate-300 hover:text-rose-300 px-2.5 py-1.5 rounded-md hover:bg-slate-800/80 transition-colors border border-transparent hover:border-slate-700"
+                title="Clear Chat History"
+                className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-rose-300 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 transition-colors shadow-xs"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Clear</span>
+                <span>Clear History</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Sub-strip with live status indicators */}
-        <div className="bg-[#081C33] border-t border-slate-800 text-[11px] text-slate-400 py-1 px-4">
+        {/* Sub-strip with official scheme status */}
+        <div className="bg-[#081C33] border-t border-slate-800 text-[11px] text-slate-300 py-1.5 px-4">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Vector Retrieval: 54 NSS Chunks Indexed</span>
-              <span className="text-slate-600">•</span>
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>National Service Scheme (NSS) Information Portal</span>
+              <span className="text-slate-600 hidden sm:inline">•</span>
               <span className="hidden sm:inline">Motto: "NOT ME BUT YOU"</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 text-slate-300">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                <span>Railway Free Tier Ready</span>
-              </span>
+            <div className="flex items-center gap-2 text-slate-400">
+              <a
+                href="https://nss.gov.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-300 transition-colors flex items-center gap-1"
+              >
+                <span>nss.gov.in</span>
+                <ExternalLink className="w-3 h-3 opacity-80" />
+              </a>
             </div>
           </div>
         </div>
@@ -274,8 +266,8 @@ export default function Home() {
             /* Welcome / Zero State View */
             <div className="my-6 space-y-6">
               {/* Civic Hero Card */}
-              <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50/50 border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
+              <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50/40 border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center gap-3.5 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-blue-900 text-amber-400 flex items-center justify-center font-bold text-sm shadow">
                     NSS
                   </div>
@@ -284,31 +276,13 @@ export default function Home() {
                       Welcome to the NSS Information Chatbot
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-600">
-                      Official portal intelligence scraped from{' '}
-                      <a
-                        href="https://nss.gov.in/"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-700 underline font-medium hover:text-blue-900"
-                      >
-                        nss.gov.in
-                      </a>
+                      Official information assistant for students, volunteers, and programme officers.
                     </p>
                   </div>
                 </div>
 
-                <div className="my-4 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-3">
-                  <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                  <div className="text-xs sm:text-sm text-amber-950 leading-relaxed">
-                    <strong>Official Knowledge Only:</strong> This chatbot is strictly grounded in the
-                    National Service Scheme public pages. It retrieves relevant text chunks, provides direct
-                    source links, and invokes the <strong>NVIDIA NIM Muse Glimmer 30B</strong> API. All chat
-                    history is preserved locally in your browser’s <code>localStorage</code>.
-                  </div>
-                </div>
-
                 {/* Suggested Questions Grid */}
-                <div className="mt-6">
+                <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
                     Frequently Asked NSS Questions:
                   </p>
@@ -319,9 +293,9 @@ export default function Home() {
                         <button
                           key={idx}
                           onClick={() => handleSendMessage(q.query)}
-                          className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 text-left transition-all group shadow-xs"
+                          className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/50 text-left transition-all group shadow-xs"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-900 flex items-center justify-center shrink-0 group-hover:bg-blue-900 group-hover:text-amber-400 transition-colors">
+                          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center shrink-0 group-hover:bg-[#0B2545] group-hover:text-amber-400 transition-colors">
                             <IconComponent className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -498,11 +472,17 @@ export default function Home() {
           {/* Bottom Information Subtitle */}
           <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400 px-2">
             <span>
-              Grounding: <strong className="text-slate-600">https://nss.gov.in/</strong>
+              Official Portal:{' '}
+              <a
+                href="https://nss.gov.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-600 hover:text-blue-800 underline font-medium"
+              >
+                nss.gov.in
+              </a>
             </span>
-            <span>
-              History kept in <code className="bg-slate-200/80 px-1 rounded text-slate-600">localStorage</code>
-            </span>
+            <span>Ministry of Youth Affairs & Sports, Govt. of India</span>
           </div>
         </div>
       </main>
