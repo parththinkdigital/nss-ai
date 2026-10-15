@@ -23,7 +23,38 @@ function getVectorStore() {
   return cachedVectorStore;
 }
 
-const NSS_DOMAIN_REGEX = /\b(nss|national service scheme|scheme|programme|program|motto|motive|motives|aim|aims|objective|objectives|symbol|badge|camp|camping|volunteer|volunteers|volunteering|activity|activities|hours|award|awards|prize|trophy|advisory|directorate|gandhi|ministry|youth|service|enroll|enrollment|tenure|certificate|wheel|konark|sun temple)\b/i;
+/**
+ * Clean conversational preambles to optimize search keywords
+ */
+function cleanSearchQuery(text) {
+  return text
+    .replace(/^(hi|hello|hey|namaste|pranam|good\s+(morning|afternoon|evening))\s*,?\s*/i, '')
+    .replace(
+      /^(can\s+you\s+(please\s+)?tell\s+me|please\s+tell\s+me|i\s+want\s+to\s+know|could\s+you\s+explain|what\s+do\s+you\s+know\s+about)\s*/i,
+      ''
+    )
+    .trim();
+}
+
+/**
+ * Check if the input is a brief greeting or pleasantry
+ */
+function isBriefGreeting(text) {
+  const clean = text.trim().toLowerCase().replace(/[^\w\s]/g, '');
+  const words = clean.split(/\s+/).filter(Boolean);
+  const greetings = ['hi', 'hello', 'hey', 'namaste', 'namaskar', 'pranam', 'greetings', 'hola', 'yo'];
+  const timeGreetings = ['good morning', 'good afternoon', 'good evening', 'good day'];
+  const thanks = ['thank you', 'thanks', 'thx', 'many thanks', 'dhanyawad', 'shukriya'];
+  const identity = ['who are you', 'what are you', 'what can you do', 'tell me about yourself', 'help', 'help me'];
+
+  if (words.length <= 4) {
+    if (greetings.includes(words[0]) || timeGreetings.some((tg) => clean.startsWith(tg))) return true;
+    if (thanks.some((t) => clean.includes(t))) return true;
+    if (identity.some((id) => clean.includes(id))) return true;
+    if (clean === 'how are you' || clean === 'how r u') return true;
+  }
+  return false;
+}
 
 export async function POST(request) {
   try {
@@ -40,42 +71,92 @@ export async function POST(request) {
     const trimmedMessage = message.trim();
     const store = getVectorStore();
 
-    // Check domain relevance
-    const isDomainQuery = NSS_DOMAIN_REGEX.test(trimmedMessage);
-    const hasHistory = Array.isArray(history) && history.length > 0;
+    let finalChunks = [];
+    let usedWebSearch = false;
 
-    // Guardrail: If message does not mention any NSS domain terms and is not a conversational follow-up
-    if (!isDomainQuery && !hasHistory) {
+    // Handle brief greetings or openers with comprehensive foundational NSS context
+    if (isBriefGreeting(trimmedMessage)) {
+      // Retrieve key overview chunks (Motto, Objectives, History, Regular Activities)
+      const overviewResults = store.search('NSS National Service Scheme motto objectives philosophy history activities', {
+        topK: 4,
+        minScore: 0.1,
+      });
+      finalChunks = overviewResults.length > 0 ? overviewResults : store.chunks.slice(0, 4);
+    } else {
+      // Substantive user question: perform hybrid retrieval
+      const cleanedQuery = cleanSearchQuery(trimmedMessage) || trimmedMessage;
+      const effectiveVectorQuery = /\bnss\b/i.test(cleanedQuery)
+        ? cleanedQuery
+        : `NSS ${cleanedQuery}`;
+
+      const retrievedChunks = store.search(effectiveVectorQuery, {
+        topK: 4,
+        minScore: 0.12,
+      });
+
+      const topMatch = retrievedChunks[0];
+      const isLocalConfident =
+        topMatch &&
+        topMatch.score >= 0.55 &&
+        topMatch.matchedWords >= 2 &&
+        topMatch.matchedWords / (topMatch.queryWordCount || 1) >= 0.5;
+
+      finalChunks = retrievedChunks;
+
+      // If answer is not decisively covered in local chunks, let web search find it!
+      if (!isLocalConfident || retrievedChunks.length === 0) {
+        try {
+          const webResults = await searchWeb(cleanedQuery || trimmedMessage);
+          if (webResults && webResults.length > 0) {
+            const webChunks = webResults.map((r, i) => ({
+              id: `web-${i + 1}`,
+              title: r.title,
+              url: r.url,
+              text: r.snippet,
+            }));
+            // Merge web chunks with any local chunks
+            finalChunks = [...webChunks, ...retrievedChunks].slice(0, 5);
+            usedWebSearch = true;
+          }
+        } catch (searchErr) {
+          console.warn('[Web Search Fallback Error]:', searchErr.message);
+        }
+      }
+    }
+
+    // If neither local index nor live web search yielded any content
+    if (!finalChunks || finalChunks.length === 0) {
       return NextResponse.json({
         answer:
-          "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
-        sources: [],
+          "I'm sorry, but official NSS documentation and verified public records do not provide information about this topic. My expertise is focused on the National Service Scheme (NSS), its volunteer programmes, guidelines, and youth community development.",
+        sources: [
+          {
+            title: 'National Service Scheme (Official Portal)',
+            url: 'https://nss.gov.in',
+          },
+        ],
         model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
         isOutOfScope: true,
       });
     }
 
-    // Enhance search query for vector retrieval if needed
-    const effectiveSearchQuery = isDomainQuery
-      ? (/\bnss\b/i.test(trimmedMessage) ? trimmedMessage : `NSS ${trimmedMessage}`)
-      : `NSS ${trimmedMessage}`;
-
-    // Perform hybrid vector + BM25 retrieval
-    const retrievedChunks = store.search(effectiveSearchQuery, {
-      topK: 4,
-      minScore: 0.12,
+    // Call NVIDIA NIM API with the user's entire message and full context
+    let response = await generateNssAnswer({
+      question: trimmedMessage,
+      contextChunks: finalChunks,
+      history,
     });
 
-    const topMatch = retrievedChunks[0];
-    const isLocalConfident = topMatch && topMatch.score >= 0.45;
+    // Auto-recovery: If local chunks failed to answer and web search wasn't tried yet, search the web!
+    const indicatesNotFound =
+      response.answer.includes('could not find verified information') ||
+      response.answer.includes('does not provide information') ||
+      response.answer.includes('official NSS content does not provide');
 
-    let finalChunks = retrievedChunks;
-    let usedWebSearch = false;
-
-    // If answer is not clearly found or covered in local index, search the live web!
-    if (!isLocalConfident) {
+    if (indicatesNotFound && !usedWebSearch) {
       try {
-        const webResults = await searchWeb(trimmedMessage);
+        const cleanedQuery = cleanSearchQuery(trimmedMessage) || trimmedMessage;
+        const webResults = await searchWeb(cleanedQuery || trimmedMessage);
         if (webResults && webResults.length > 0) {
           const webChunks = webResults.map((r, i) => ({
             id: `web-${i + 1}`,
@@ -83,41 +164,24 @@ export async function POST(request) {
             url: r.url,
             text: r.snippet,
           }));
-          finalChunks = [...webChunks, ...retrievedChunks].slice(0, 5);
-          usedWebSearch = true;
+          const retryResponse = await generateNssAnswer({
+            question: trimmedMessage,
+            contextChunks: webChunks,
+            history,
+          });
+
+          if (
+            !retryResponse.answer.includes('could not find verified information') &&
+            !retryResponse.answer.includes('does not provide information')
+          ) {
+            response = retryResponse;
+            usedWebSearch = true;
+          }
         }
-      } catch (searchErr) {
-        console.warn('[Web Search Fallback Error]:', searchErr.message);
+      } catch (retryErr) {
+        console.warn('[Web Search Auto-Recovery Error]:', retryErr.message);
       }
     }
-
-    // If query has no domain terms and neither local nor web returned relevant NSS content, reject
-    if (!isDomainQuery && (!topMatch || topMatch.matchedWords === 0 || topMatch.score < 0.22) && !usedWebSearch) {
-      return NextResponse.json({
-        answer:
-          "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
-        sources: [],
-        model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
-        isOutOfScope: true,
-      });
-    }
-
-    if (finalChunks.length === 0) {
-      return NextResponse.json({
-        answer:
-          "I'm sorry, but the official NSS content does not provide information about this topic. My knowledge is limited to official National Service Scheme documentation and public portals.",
-        sources: [],
-        model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b',
-        isOutOfScope: true,
-      });
-    }
-
-    // Call NVIDIA NIM API
-    const response = await generateNssAnswer({
-      question: trimmedMessage,
-      contextChunks: finalChunks,
-      history,
-    });
 
     if (usedWebSearch) {
       response.searchSource = 'web_search';

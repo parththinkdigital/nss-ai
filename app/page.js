@@ -432,7 +432,6 @@ export default function Home() {
               </div>
             ))
           )}
-
           {/* Loading Indicator */}
           {isLoading && (
             <div className="flex gap-3 justify-start items-center">
