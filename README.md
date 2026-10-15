@@ -1,8 +1,8 @@
-# 🇮🇳 National Service Scheme (NSS) Information Chatbot
+# 🇮🇳 National Service Scheme (NSS) AI Chatbot
 
-An AI-powered information assistant for the **National Service Scheme (NSS)**, Ministry of Youth Affairs & Sports, Government of India.
+An AI chatbot for the **National Service Scheme (NSS)**, Ministry of Youth Affairs & Sports, Government of India.
 
-Built with **Next.js** (JavaScript), grounded in public data scraped directly from **[nss.gov.in](https://nss.gov.in/)**, and powered by **NVIDIA NIM Muse Glimmer 30B** (`meta/muse-glimmer-30b`) for retrieval-augmented generation (RAG).
+Built with **Next.js** (JavaScript), grounded in public data scraped directly from **[nss.gov.in](https://nss.gov.in/)**, and powered by **NVIDIA NIM** (`openai/gpt-oss-20b`) for ultra-fast retrieval-augmented generation (RAG).
 
 Designed for seamless deployment on **Railway's Free Tier** (or any container runtime).
 

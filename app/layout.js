@@ -1,9 +1,9 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'NSS Information Chatbot | National Service Scheme (Govt. of India)',
+  title: 'NSS AI Chatbot | National Service Scheme (Govt. of India)',
   description:
-    'Retrieval-augmented chatbot for official National Service Scheme (NSS) information, powered by NVIDIA NIM Muse Glimmer 30B.',
+    'Official AI chatbot for the National Service Scheme (NSS), Ministry of Youth Affairs & Sports, Government of India.',
   icons: {
     icon: '/favicon.ico',
   },

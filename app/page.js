@@ -207,7 +207,7 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-base md:text-lg leading-tight tracking-tight text-white flex items-center gap-1.5">
-                  NSS Information Assistant
+                  NSS AI Chatbot
                 </h1>
                 <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-900/80 text-blue-200 border border-blue-700/60">
                   Govt. of India
@@ -273,7 +273,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-[#0B2545]">
-                      Welcome to the NSS Information Chatbot
+                      Welcome to the NSS AI Chatbot
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-600">
                       Official information assistant for students, volunteers, and programme officers.
@@ -344,7 +344,7 @@ export default function Home() {
                   {/* Role Header & Actions */}
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-black/5 text-xs text-slate-400">
                     <span className="font-semibold text-slate-500">
-                      {msg.role === 'user' ? 'You' : 'NSS Official Assistant'}
+                      {msg.role === 'user' ? 'You' : 'NSS AI Chatbot'}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px]">{msg.timestamp}</span>
